@@ -1,0 +1,59 @@
+echo "-------------------------------------------------------------------------"
+echo "Running $0 on $HOSTNAME"
+echo "-------------------------------------------------------------------------"
+
+################################################################################
+# Check whether there's an instance of gpg-agent running on this machine, and
+# whether gpg-connect-agent can communicate with it (or thinks it can).
+################################################################################
+pid=$(pgrep -u $USER gpg-agent)
+if [[ $? -eq 0 ]] ; then
+  echo "PID of running gpg-agent is $pid."
+else
+  echo "Can't find running gpg-agent."
+fi
+
+if gpg-connect-agent /bye ; then
+  echo "gpg-connect-agent: Can connect to gpg-agent."
+  echo "gpg-connect-agent: Retrieved PID is" $(gpg-connect-agent --subst /serverpid '/echo ${get serverpid}' /bye)
+else
+  echo "gpg-connect-agent: Cannot connect to gpg-agent."
+fi
+
+################################################################################
+# Some gpg-agent manuals recommend making sure that GPG_TTY is set, but I've
+# never found it to be a problem whether it's set or not.
+################################################################################
+if [[ -z "$GPG_TTY" ]] ; then
+  echo "GPG_TTY is not set."
+else
+  echo "GPG_TTY is $GPG_TTY"
+fi
+
+################################################################################
+# Check the details of $GPG_AGENT_INFO.  Some programs use this variable to
+# determine which socket the agent is listening on, in order to communicate with
+# it.
+################################################################################
+if [[ -z "$GPG_AGENT_INFO" ]] ; then
+  echo "GPG_AGENT_INFO is not set."
+else
+  echo "GPG_AGENT_INFO is $GPG_AGENT_INFO"
+
+  IFS=':' read -ra INFO <<< "$GPG_AGENT_INFO"
+
+  if [[ -S ${INFO[0]} ]] ; then
+    echo "GPG_AGENT_INFO: socket ${INFO[0]} exists."
+  else
+    echo "GPG_AGENT_INFO: socket ${INFO[0]} does not exist."
+  fi
+
+  if [[ -z ${pid-unset} ]] ; then
+    echo "GPG_AGENT_INFO: variable PID is ${INFO[1]}, but gpg-agent has no PID."
+  elif [[ ${INFO[1]} -eq $pid ]] ; then
+    echo "GPG_AGENT_INFO: PIDs ${INFO[1]} and $pid agree."
+  else
+    echo "GPG_AGENT_INFO: variable PID ${INFO[1]} differs from gpg-agent PID $pid"
+  fi
+
+fi
