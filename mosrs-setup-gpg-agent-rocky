@@ -1,0 +1,25 @@
+# Modified from mosrs-setup-gpg-agent-ppha
+  # Clean out the files and variables that gpg-agent uses, and kill the agent.
+  # NB Programs that interact with gpg-agent may read GPG_AGENT_INFO to find out
+  # the PID of the agent and the socket to use for communication with it.  If
+  # this var is out of date, then it can confuse interaction with the agent.
+  # This var must be exported so that subprocesses (e.g., rosie) can use the
+  # agent.
+  unset GPG_AGENT_INFO
+  gpgconf --kill gpg-agent
+  
+  # Restart the agent and wait to ensure it's started before trying to get its
+  # PID.
+  gpg-agent --daemon --allow-preset-passphrase --batch --max-cache-ttl 43200
+  sleep 2
+
+  # Even though gpg-agent removed use of the GPG_AGENT_INFO env variable in
+  # v2.20, Rosie is hard-coded to interrogate this variable to find out how to
+  # communicate with the agent (see https://github.com/metomi/rose/issues/2483).
+  # So, we need to create it manually.
+  gpg_sock=$(gpgconf --list-dirs agent-socket)
+  gpg_pid=$(pidof gpg-agent)
+  export GPG_AGENT_INFO=$gpg_sock:$gpg_pid:1
+  echo "GPG_AGENT_INFO=$GPG_AGENT_INFO"
+
+  mosrs-cache-password
