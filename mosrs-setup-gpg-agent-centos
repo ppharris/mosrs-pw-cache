@@ -1,0 +1,30 @@
+# Modified from mosrs-setup-gpg-agent
+  envfile="$HOME/.gnupg/gpg-agent.env.$HOSTNAME"
+
+  # Clean out the files and variables that gpg-agent uses, and kill the agent.
+  # NB Programs that interact with gpg-agent may read GPG_AGENT_INFO to find out
+  # the PID of the agent and the socket to use for communication with it.  If
+  # this var is out of date, then it can confuse interaction with the agent.
+  # This var must be exported so that subprocesses (e.g., rosie) can use the
+  # agent.
+  unset GPG_AGENT_INFO
+  rm -fv "$envfile"
+  killall -u $USER gpg-agent
+
+  # Restart the agent.
+  gpg-agent --daemon --allow-preset-passphrase --batch --no-use-standard-socket \
+            --max-cache-ttl 43200 --write-env-file "$envfile"
+
+  if [[ -s "$envfile" ]]; then
+    eval "$(cat $envfile)"
+    export GPG_AGENT_INFO
+
+    # If the agent/environment has been set up correctly, this should ask for
+    # the MOSRS passphrase once; rosie should be able to use the cached
+    # passphrase through GPG_AGENT_INFO.
+    mosrs-cache-password
+  else
+    echo "$envfile does not exist: aborting."    
+  fi
+
+  unset envfile
