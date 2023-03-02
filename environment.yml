@@ -1,0 +1,12 @@
+---
+name: mosrs
+channels:
+  - conda-forge
+dependencies:
+# Python is only needed for pip, but it's not possible to install a Python 2
+# env that is compatible with Rose/Cylc because of the PyGTK dependency. By
+# installing pip through Python 3, this env can still use the system Python 2.
+  - python=3
+  - perl=5
+  - perl-xml-parser
+  - nccmp
